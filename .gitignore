@@ -1,0 +1,50 @@
+# --- Fichiers compilés ---
+*.class
+
+# --- Dossiers de sortie / build ---
+bin/
+out/
+build/
+target/
+
+# --- Archives générées ---
+# (le .jar final se génère pour le livrable, pas besoin de le versionner)
+*.jar
+*.war
+*.ear
+
+# --- Logs ---
+*.log
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# --- Eclipse ---
+.classpath
+.project
+.settings/
+
+# --- VS Code ---
+.vscode/
+
+# --- NetBeans ---
+nbproject/private/
+nbbuild/
+nbdist/
+
+# --- Fichiers système ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Fichiers temporaires ---
+*.tmp
+*.swp
+*~
+
+# --- Crash JVM ---
+hs_err_pid*
+replay_pid*
