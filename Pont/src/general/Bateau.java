@@ -12,10 +12,18 @@ public class Bateau extends Thread {
         this.gestionnaire = gestionnaire;
     }
 
-    /** Cycle de vie : s'enregistrer, attendre son tour (FIFO + pont OUVERT), traverser, signaler la fin. */
+    /** Cycle de vie : s'enregistrer, attendre son tour, traverser, signaler la fin. */
     @Override
     public void run() {
-        // TODO : gestionnaire.enregistrer(this); gestionnaire.attendreTour(this); traverser; gestionnaire.finTraversee(this);
+        try {
+            gestionnaire.enregistrer(this);
+            gestionnaire.attendreTour(this);
+            System.out.println(">>> Bateau " + id + " (" + direction + ") traverse");
+            Thread.sleep(1500); // durée de traversée, HORS du bloc synchronized
+            gestionnaire.finTraversee(this);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public int getBateauId() { return id; }

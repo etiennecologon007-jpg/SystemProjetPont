@@ -1,47 +1,52 @@
 package general;
-import java.util.Timer;
-import java.util.TimerTask;
+
+import java.util.LinkedList;
+import java.util.Queue;
 
 /**
- * File FIFO commune des bateaux et cycle d'ouverture du pont (PARTIE B).
- * Utilise Pont.ouvrir() / Pont.fermer() fournis par la partie A.
+ * File FIFO commune des bateaux (PARTIE B) - ETAPE 1 : file + traversée, sans pont ni timer.
+ * Règle : un bateau ne traverse que s'il est en tête de file et si aucun autre bateau ne traverse.
  */
 public class GestionnaireBateaux {
 
-    private final Pont pont;
-    private final long delaiEntreOuverturesMs; // 60 000 ms (1 minute en simulation)
-    private long heureProchaineOuverture = 0;
-    private final Timer timer = new Timer(true);
+    private final Pont pont; // inutilisé à l'étape 1 (peut être null)
+    private final long delaiEntreOuverturesMs;
 
-    // TODO : file FIFO (ex: Queue<Bateau>), bateau actuellement en traversée
+    private final Queue<Bateau> file = new LinkedList<>();
+    private boolean traversee = false; // true si un bateau est en train de passer
 
     public GestionnaireBateaux(Pont pont, long delaiEntreOuverturesMs) {
         this.pont = pont;
         this.delaiEntreOuverturesMs = delaiEntreOuverturesMs;
     }
 
-    /** Ajoute le bateau en fin de file et déclenche une ouverture si elle est autorisée. */
+    /** Ajoute le bateau en fin de file (ordre d'arrivée = ordre de passage). */
     public synchronized void enregistrer(Bateau b) {
-        // TODO
+        file.add(b);
+        System.out.println("[file] Bateau " + b.getBateauId() + " (" + b.getDirection() + ") arrive. File : " + ids());
     }
 
-    /** Bloque jusqu'à ce que le bateau soit en tête de file ET que le pont soit OUVERT. */
+    /** Bloque jusqu'à ce que le bateau soit en tête de file ET que la voie soit libre. */
     public synchronized void attendreTour(Bateau b) throws InterruptedException {
-        // TODO
+        // while (et non if) : on revérifie la condition après chaque réveil
+        while (file.peek() != b || traversee) {
+            wait();
+        }
+        file.poll();       // il quitte la file...
+        traversee = true;  // ...et occupe la voie
     }
 
-    /** Le bateau a fini de traverser : suivant, ou fermeture du pont si la file est vide. */
+    /** Le bateau a fini de traverser : on libère la voie et on réveille les bateaux en attente. */
     public synchronized void finTraversee(Bateau b) {
-        // TODO
+        traversee = false;
+        System.out.println("[file] Bateau " + b.getBateauId() + " a fini. File : " + ids());
+        notifyAll();
     }
 
-    /** Vérifie : bateaux en attente + heure autorisée atteinte -> lance le cycle d'ouverture. */
-    private void verifierOuverture() {
-        // TODO
-    }
-
-    /** Programme verifierOuverture() à l'heure de la prochaine ouverture autorisée (Timer/TimerTask). */
-    private void programmerProchaineOuverture() {
-        // TODO : heureProchaineOuverture = now + delaiEntreOuverturesMs ; timer.schedule(...)
+    /** Aide au débogage : liste des identifiants dans la file. */
+    private String ids() {
+        StringBuilder sb = new StringBuilder("[");
+        for (Bateau b : file) sb.append(b.getBateauId()).append(' ');
+        return sb.append(']').toString();
     }
 }
