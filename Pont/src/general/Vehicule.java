@@ -1,3 +1,4 @@
+package general;
 /**
  * Véhicule terrestre générique (PARTIE A). Chaque véhicule est un thread.
  * Les sous-classes précisent le nombre de segments occupés.

@@ -1,3 +1,4 @@
+package general;
 /** Ambulance ou pompiers : prioritaire sur tous les autres véhicules (PARTIE A). */
 public class VehiculePrioritaire extends Vehicule {
 

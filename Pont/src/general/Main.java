@@ -1,3 +1,4 @@
+package general;
 /** Point d'entrée : crée le pont et lance la simulation (PARTIE B). */
 public class Main {
     public static void main(String[] args) {

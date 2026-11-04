@@ -1,3 +1,4 @@
+package general;
 /** Bateau : thread qui s'enregistre dans la file FIFO puis traverse sous le pont (PARTIE B). */
 public class Bateau extends Thread {
 

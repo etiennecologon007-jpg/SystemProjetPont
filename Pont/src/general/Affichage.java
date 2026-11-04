@@ -1,3 +1,4 @@
+package general;
 /**
  * Affichage console animé avec séquences ANSI (PARTIE B).
  * Méthodes synchronisées pour éviter que les threads mélangent leurs écritures.

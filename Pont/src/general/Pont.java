@@ -1,3 +1,6 @@
+package general;
+
+
 /**
  * Moniteur central du pont (PARTIE A).
  * Gère l'état du pont, les N segments et l'accès des véhicules terrestres.

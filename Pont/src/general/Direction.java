@@ -1,3 +1,4 @@
+package general;
 /** Sens de circulation des véhicules terrestres. */
 public enum Direction {
     GAUCHE_DROITE, DROITE_GAUCHE;
