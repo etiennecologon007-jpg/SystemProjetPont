@@ -2,48 +2,113 @@ package general;
 
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
- * File FIFO commune des bateaux (PARTIE B) - ETAPE 1 : file + traversée, sans pont ni timer.
- * Règle : un bateau ne traverse que s'il est en tête de file et si aucun autre bateau ne traverse.
+ * File FIFO commune des bateaux et cycle d'ouverture du pont (PARTIE B) - ETAPE 3.
+ * Un thread contrôleur gère le cycle : attendre un bateau ET l'autorisation -> ouvrir -> laisser passer -> fermer.
+ * Après chaque fermeture, un Timer lève l'autorisation d'ouverture après un délai minimal.
  */
 public class GestionnaireBateaux {
 
-    private final Pont pont; // inutilisé à l'étape 1 (peut être null)
-    private final long delaiEntreOuverturesMs;
+    private final Pont pont;
+    private final long delaiEntreOuverturesMs; // 60 000 ms dans le sujet (1 minute en simulation)
+    private long heureProchaineOuverture = 0;  // en ms (System.currentTimeMillis)
+    private boolean ouvertureAutorisee = true; // true au départ : première ouverture possible tout de suite
+    private final Timer timer = new Timer(true);
 
     private final Queue<Bateau> file = new LinkedList<>();
-    private boolean traversee = false; // true si un bateau est en train de passer
+    private boolean traversee = false;
+    private boolean fermetureDecidee = false;
 
     public GestionnaireBateaux(Pont pont, long delaiEntreOuverturesMs) {
         this.pont = pont;
         this.delaiEntreOuverturesMs = delaiEntreOuverturesMs;
+        Thread controleur = new Thread(this::cycleOuverture, "controleur-pont");
+        controleur.setDaemon(true);
+        controleur.start();
     }
 
-    /** Ajoute le bateau en fin de file (ordre d'arrivée = ordre de passage). */
+    /** Ajoute le bateau en fin de file et réveille le contrôleur. */
     public synchronized void enregistrer(Bateau b) {
         file.add(b);
         System.out.println("[file] Bateau " + b.getBateauId() + " (" + b.getDirection() + ") arrive. File : " + ids());
+        notifyAll();
     }
 
-    /** Bloque jusqu'à ce que le bateau soit en tête de file ET que la voie soit libre. */
+    /** Bloque jusqu'à : tête de file, voie libre, pont OUVERT et fermeture non décidée. */
     public synchronized void attendreTour(Bateau b) throws InterruptedException {
-        // while (et non if) : on revérifie la condition après chaque réveil
-        while (file.peek() != b || traversee) {
+        while (file.peek() != b || traversee || fermetureDecidee || pont.getEtat() != EtatPont.OUVERT) {
             wait();
         }
-        file.poll();       // il quitte la file...
-        traversee = true;  // ...et occupe la voie
+        file.poll();
+        traversee = true;
     }
 
-    /** Le bateau a fini de traverser : on libère la voie et on réveille les bateaux en attente. */
+    /** Le bateau a fini de traverser : libère la voie et réveille tout le monde. */
     public synchronized void finTraversee(Bateau b) {
         traversee = false;
         System.out.println("[file] Bateau " + b.getBateauId() + " a fini. File : " + ids());
         notifyAll();
     }
 
-    /** Aide au débogage : liste des identifiants dans la file. */
+    /** @return l'heure (ms) de la prochaine ouverture autorisée (utile pour l'affichage). */
+    public synchronized long getHeureProchaineOuverture() {
+        return heureProchaineOuverture;
+    }
+
+    /** Boucle du thread contrôleur. ouvrir()/fermer() sont appelés HORS synchronized. */
+    private void cycleOuverture() {
+        try {
+            while (true) {
+                // 1) attendre : au moins un bateau EN FILE ET ouverture autorisée (délai écoulé)
+                synchronized (this) {
+                    while (file.isEmpty() || !ouvertureAutorisee) wait();
+                    ouvertureAutorisee = false;
+                }
+                // 2) ouvrir, puis réveiller les bateaux
+                pont.ouvrir();
+                synchronized (this) { notifyAll(); }
+
+                // 3) attendre file vide + voie libre, puis interdire tout passage
+                synchronized (this) {
+                    while (!file.isEmpty() || traversee) wait();
+                    fermetureDecidee = true;
+                }
+                // 4) fermer
+                pont.fermer();
+                synchronized (this) {
+                    fermetureDecidee = false;
+                    notifyAll();
+                }
+                // 5) mémoriser l'heure de fermeture complète et armer le Timer
+                programmerProchaineOuverture();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * T_prochaine_ouverture = T_fermeture_complete + délai.
+     * Le TimerTask lève l'autorisation et réveille le contrôleur, qui vérifie alors s'il y a des bateaux.
+     */
+    private void programmerProchaineOuverture() {
+        synchronized (this) {
+            heureProchaineOuverture = System.currentTimeMillis() + delaiEntreOuverturesMs;
+        }
+        timer.schedule(new TimerTask() {
+            @Override public void run() {
+                synchronized (GestionnaireBateaux.this) {
+                    ouvertureAutorisee = true;
+                    System.out.println("[timer] Nouvelle ouverture autorisée");
+                    GestionnaireBateaux.this.notifyAll();
+                }
+            }
+        }, delaiEntreOuverturesMs);
+    }
+
     private String ids() {
         StringBuilder sb = new StringBuilder("[");
         for (Bateau b : file) sb.append(b.getBateauId()).append(' ');
