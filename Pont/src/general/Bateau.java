@@ -4,7 +4,7 @@ package general;
 public class Bateau extends Thread {
 
     /** Durée de la traversée (ms), utilisée aussi par l'affichage pour animer le bateau. */
-    public static final long DUREE_TRAVERSEE_MS = 3000;
+    public static long DUREE_TRAVERSEE_MS = 3000;
 
     private final int id;
     private final DirectionBateau direction;
