@@ -1,6 +1,8 @@
 package general;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -20,6 +22,8 @@ public class GestionnaireBateaux {
 
     private final Queue<Bateau> file = new LinkedList<>();
     private boolean traversee = false;
+    private Bateau enTraversee = null;      // bateau actuellement sous le pont (pour l'affichage)
+    private long debutTraversee = 0;
     private boolean fermetureDecidee = false;
 
     public GestionnaireBateaux(Pont pont, long delaiEntreOuverturesMs) {
@@ -33,7 +37,7 @@ public class GestionnaireBateaux {
     /** Ajoute le bateau en fin de file et réveille le contrôleur. */
     public synchronized void enregistrer(Bateau b) {
         file.add(b);
-        System.out.println("[file] Bateau " + b.getBateauId() + " (" + b.getDirection() + ") arrive. File : " + ids());
+        Affichage.log("[file] Bateau " + b.getBateauId() + " (" + b.getDirection() + ") arrive");
         notifyAll();
     }
 
@@ -44,14 +48,32 @@ public class GestionnaireBateaux {
         }
         file.poll();
         traversee = true;
+        enTraversee = b;
+        debutTraversee = System.currentTimeMillis();
     }
 
     /** Le bateau a fini de traverser : libère la voie et réveille tout le monde. */
     public synchronized void finTraversee(Bateau b) {
         traversee = false;
-        System.out.println("[file] Bateau " + b.getBateauId() + " a fini. File : " + ids());
+        enTraversee = null;
+        Affichage.log("[file] Bateau " + b.getBateauId() + " a fini");
         notifyAll();
     }
+
+
+    // ---------- Lecture de l'état, pour l'affichage ----------
+
+    /** @return une copie de la file d'attente (ordre FIFO). */
+    public synchronized List<Bateau> getFile() { return new ArrayList<>(file); }
+
+    /** @return le bateau actuellement sous le pont, ou null. */
+    public synchronized Bateau getBateauEnTraversee() { return enTraversee; }
+
+    /** @return l'heure (ms) de début de la traversée en cours. */
+    public synchronized long getDebutTraversee() { return debutTraversee; }
+
+    /** @return true si une nouvelle ouverture est déjà autorisée (délai écoulé). */
+    public synchronized boolean isOuvertureAutorisee() { return ouvertureAutorisee; }
 
     /** @return l'heure (ms) de la prochaine ouverture autorisée (utile pour l'affichage). */
     public synchronized long getHeureProchaineOuverture() {
@@ -102,7 +124,7 @@ public class GestionnaireBateaux {
             @Override public void run() {
                 synchronized (GestionnaireBateaux.this) {
                     ouvertureAutorisee = true;
-                    System.out.println("[timer] Nouvelle ouverture autorisée");
+                    Affichage.log("[timer] Nouvelle ouverture autorisée");
                     GestionnaireBateaux.this.notifyAll();
                 }
             }
